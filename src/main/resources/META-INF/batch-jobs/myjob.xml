@@ -10,7 +10,6 @@
     </step>
 
     <step id="test">
-        <!-- released version won't work with this -->
         <chunk>
             <reader ref="jdbcItemReader">
                 <properties>
