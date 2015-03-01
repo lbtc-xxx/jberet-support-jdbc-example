@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <job id="myjob" version="1.0" xmlns="http://xmlns.jcp.org/xml/ns/javaee">
     <properties>
-        <property name="dataSourceLookup" value="java:jboss/datasources/MyDS"/>
+        <property name="txDataSource" value="java:jboss/datasources/MyTxDS"/>
+        <property name="nonTxDataSource" value="java:jboss/datasources/MyNonTxDS"/>
     </properties>
 
     <step id="prepare" next="test">
@@ -10,15 +11,12 @@
 
     <step id="test">
         <!-- released version won't work with this -->
-        <!--<properties>-->
-            <!--<property name="jberet.local-tx" value="true"/>-->
-        <!--</properties>-->
         <chunk>
             <reader ref="jdbcItemReader">
                 <properties>
+                    <property name="dataSourceLookup" value="#{jobProperties['nonTxDataSource']}"/>
                     <property name="beanType" value="java.util.Map"/>
                     <property name="sql" value="select data from src order by data"/>
-                    <property name="dataSourceLookup" value="#{jobProperties['dataSourceLookup']}"/>
                     <property name="resultSetProperties"
                               value="fetchSize=100, resultSetConcurrency=CONCUR_UPDATABLE, fetchDirection=FETCH_REVERSE, resultSetType=TYPE_SCROLL_SENSITIVE, resultSetHoldability=HOLD_CURSORS_OVER_COMMIT"/>
                 </properties>
@@ -26,8 +24,8 @@
             <processor ref="myItemProcessor"/>
             <writer ref="jdbcItemWriter">
                 <properties>
+                    <property name="dataSourceLookup" value="#{jobProperties['txDataSource']}"/>
                     <property name="sql" value="insert into dest (data) values (?)"/>
-                    <property name="dataSourceLookup" value="#{jobProperties['dataSourceLookup']}"/>
                 </properties>
             </writer>
         </chunk>

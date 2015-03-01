@@ -3,8 +3,11 @@ package org.nailedtothex.example;
 import javax.annotation.Resource;
 import javax.batch.api.AbstractBatchlet;
 import javax.enterprise.context.Dependent;
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.sql.DataSource;
+import javax.transaction.Transactional;
+import javax.transaction.UserTransaction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.Statement;
@@ -12,20 +15,21 @@ import java.sql.Statement;
 @Named
 @Dependent
 public class MyBatchlet extends AbstractBatchlet {
-    @Resource(lookup = "java:jboss/datasources/MyDS")
+    @Resource(lookup = "java:jboss/datasources/MyTxDS")
     DataSource ds;
 
     @Override
+    @Transactional
     public String process() throws Exception {
         try (Connection cn = ds.getConnection()) {
             try (Statement st = cn.createStatement()) {
                 try {
-                    st.executeUpdate("drop table if exists src");
+                    st.executeUpdate("drop table src");
                 } catch (Exception e) {
                     // nop
                 }
                 try {
-                    st.executeUpdate("drop table if exists dest");
+                    st.executeUpdate("drop table dest");
                 } catch (Exception e) {
                     // nop
                 }
@@ -33,18 +37,15 @@ public class MyBatchlet extends AbstractBatchlet {
                 st.executeUpdate("create table dest (data int primary key)");
             }
 
-            cn.setAutoCommit(false);
             try (PreparedStatement ps = cn.prepareStatement("insert into src (data) values (?)")) {
                 for (int i = 1; i <= 20; i++) {
                     ps.setInt(1, i);
                     ps.executeUpdate();
                 }
 
-                // to make exception happen in ItemWriter due to duplicate key
-                ps.setInt(1, 15);
-                ps.executeUpdate();
-
-                cn.commit();
+                // to make exception happen in ItemWriter due to duplicate key; for rollback testing
+//                ps.setInt(1, 15);
+//                ps.executeUpdate();
             }
         }
         return null;
